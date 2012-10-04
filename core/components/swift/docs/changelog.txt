@@ -1,0 +1,5 @@
+Changelog for OpenStack Swift.
+
+1.0.0 beta 1 (04.10.2012)
+===============================
+Initial release

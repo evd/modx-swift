@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model package="swift" baseClass="xPDOObject" platform="mysql" defaultEngine="MyISAM" phpdoc-package="swift">
+    <object class="SwiftMediaSource" extends="modMediaSource" />
+</model>
