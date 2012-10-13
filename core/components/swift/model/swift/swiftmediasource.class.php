@@ -1,8 +1,5 @@
 <?php
-/**
- * @package modx
- * @subpackage sources
- */
+
 require_once MODX_CORE_PATH . 'model/modx/sources/modmediasource.class.php';
 /**
  * Implements an OpenStack Object Storage (Swift) media source, allowing basic manipulation, uploading and URL-retrieval of resources
@@ -452,7 +449,7 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
      * @return bool
      */
     public function uploadObjectsToContainer($container,array $objects = array()) {
-        $container = trim($container);
+        $container = trim($container,'/');
         if ($container == '/' || $container == '.') $container = '';
 
         $allowedFileTypes = explode(',',$this->xpdo->getOption('upload_files',null,''));
