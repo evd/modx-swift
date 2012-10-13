@@ -1,5 +1,9 @@
 Changelog for OpenStack Swift.
 
+1.0.0 beta 2 (14.10.2012)
+===============================
+Fix filepath in upload method
+
 1.0.0 beta 1 (04.10.2012)
 ===============================
 Initial release
