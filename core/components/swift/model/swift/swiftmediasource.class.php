@@ -343,7 +343,10 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
      * @return boolean
      */
     public function createContainer($name,$parentContainer) {
-        $newPath = rtrim($parentContainer,'/').'/'.trim($name,'/');
+        $parentContainer = trim($parentContainer,'/') . '/';
+        if ($parentContainer == '/' || $parentContainer == '.') $parentContainer = '';
+
+        $newPath = $parentContainer.trim($name,'/');
         $obj = new CF_Object($this->container,$newPath,false);
         /* check to see if folder already exists */
         if (!empty($obj->content_type)) {
@@ -449,7 +452,7 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
      * @return bool
      */
     public function uploadObjectsToContainer($container,array $objects = array()) {
-        $container = trim($container,'/');
+        $container = trim($container,'/') . '/';
         if ($container == '/' || $container == '.') $container = '';
 
         $allowedFileTypes = explode(',',$this->xpdo->getOption('upload_files',null,''));
@@ -480,7 +483,7 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
                 continue;
             }
 
-            $newPath = $container.'/'.$file['name'];
+            $newPath = $container.$file['name'];
 
 
             $obj = new CF_Object($this->container, $newPath);
