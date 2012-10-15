@@ -104,6 +104,20 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
         return $objects;
     }
 
+
+    /**
+     * Tells if a file is a binary file or not
+     * @param CF_Object $obj
+     * @return boolean
+     */
+    public function isBinary($obj) {
+        if ($obj instanceof CF_Object) {
+            return (stripos($obj->content_type, 'text') !== 0);
+        }
+        return false;
+
+    }
+
     /**
      * @param string $path
      * @return array
@@ -127,7 +141,7 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
 
             if ($isDir) {
                 $directories[$currentPath] = array(
-                    'id' => $currentPath,
+                    'id' => $currentPath.'/',
                     'text' => $fileName,
                     'cls' => 'icon-'.$extension,
                     'type' => 'dir',
@@ -136,7 +150,7 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
                     'pathRelative' => $currentPath,
                     'perms' => '',
                 );
-                $directories[$currentPath]['menu'] = array('items' => $this->getListContextMenu($currentPath,$isDir,$directories[$currentPath]));
+                $directories[$currentPath]['menu'] = array('items' => $this->getListContextMenu($currentPath,$isDir,$directories[$currentPath], false));
             } else {
                 $files[$currentPath] = array(
                     'id' => $currentPath,
@@ -150,7 +164,8 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
                     'url' => rtrim($properties['url'],'/').'/'.$currentPath,
                     'file' => $currentPath,
                 );
-                $files[$currentPath]['menu'] = array('items' => $this->getListContextMenu($currentPath,$isDir,$files[$currentPath]));
+                $isBinary = $this->isBinary($obj);
+                $files[$currentPath]['menu'] = array('items' => $this->getListContextMenu($currentPath, $isDir,$files[$currentPath], $isBinary));
             }
         }
 
@@ -176,10 +191,20 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
      * @param array $fileArray
      * @return array
      */
-    public function getListContextMenu($file,$isDir,array $fileArray) {
+    public function getListContextMenu($file,$isDir,array $fileArray, $isBinary) {
         $menu = array();
         if (!$isDir) { /* files */
             if ($this->hasPermission('file_update')) {
+                if (!$isBinary) {
+                    $menu[] = array(
+                        'text' => $this->xpdo->lexicon('file_edit'),
+                        'handler' => 'this.editFile',
+                    );
+                    $menu[] = array(
+                        'text' => $this->xpdo->lexicon('quick_update_file'),
+                        'handler' => 'this.quickUpdateFile',
+                    );
+                }
                 $menu[] = array(
                     'text' => $this->xpdo->lexicon('rename'),
                     'handler' => 'this.renameFile',
@@ -205,6 +230,12 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
                     'handler' => 'this.createDirectory',
                 );
             }
+            /*if ($this->hasPermission('directory_update')) {
+                $menu[] = array(
+                    'text' => $this->xpdo->lexicon('rename'),
+                    'handler' => 'this.renameDirectory',
+                );
+            }*/
             $menu[] = array(
                 'text' => $this->xpdo->lexicon('directory_refresh'),
                 'handler' => 'this.refreshActiveNode',
@@ -214,6 +245,16 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
                 $menu[] = array(
                     'text' => $this->xpdo->lexicon('upload_files'),
                     'handler' => 'this.uploadFiles',
+                );
+            }
+            if ($this->hasPermission('file_create')) {
+                $menu[] = array(
+                    'text' => $this->xpdo->lexicon('file_create'),
+                    'handler' => 'this.createFile',
+                );
+                $menu[] = array(
+                    'text' => $this->xpdo->lexicon('quick_create_file'),
+                    'handler' => 'this.quickCreateFile',
                 );
             }
             if ($this->hasPermission('directory_remove')) {
@@ -389,6 +430,36 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
         return $deleted;
     }
 
+    /**
+     * Rename a container
+     *
+     * @param string $oldPath
+     * @param string $newName
+     * @return boolean
+     */
+    public function renameContainer($oldPath,$newName) {
+        return false; //TODO: Need manual move all files in container??
+        try {
+            $obj = new CF_Object($this->container,$oldPath,true);
+        }
+        catch (NoSuchObjectException $e) {
+            $this->addError('file',$this->xpdo->lexicon('file_folder_err_ns').': '.$oldPath);
+            return false;
+        }
+    
+        $dir = dirname($oldPath);
+        $newPath = ($dir != '.' ? $dir.'/' : '').$newName;
+
+        $moved = $this->container->move_object_to($oldPath, $this->container, $newPath);
+        if (!$moved) {
+            $this->addError('file',$this->xpdo->lexicon('file_folder_err_rename').': '.$oldPath);
+            return false;
+        }
+
+        $this->xpdo->logManagerAction('directory_rename','',$oldPath);
+        return $moved;
+
+    }
 
     /**
      * Delete a file
@@ -443,6 +514,65 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
         return $moved;
 
     }
+
+
+    /**
+     * Update the contents of a specific object
+     *
+     * @param string $objectPath
+     * @param string $content
+     * @return boolean|string
+     */
+    public function updateObject($objectPath,$content) {
+
+        try {
+            $obj = new CF_Object($this->container,ltrim($objectPath,'/'),true);
+    
+        }
+        catch (NoSuchObjectException $e) {
+            $this->addError('file',$this->xpdo->lexicon('file_err_ns').': '.$objectPath);
+            return false;
+        }
+
+        /* update file */
+        $obj->write($content);
+
+        $this->xpdo->logManagerAction('file_create','',$filePath);
+
+        return rawurlencode($objectPath);
+
+    }
+
+    /**
+     * Create an object from a path
+     *
+     * @param string $objectPath
+     * @param string $name
+     * @param string $content
+     * @return boolean|string
+     */
+    public function createObject($objectPath,$name,$content) {
+        $objectPath = trim($objectPath,'/') . '/';
+        if ($objectPath == '/' || $objectPath == '.') $objectPath = '';
+
+        $filePath = $objectPath.trim($name,'/');
+
+        $obj = new CF_Object($this->container,$filePath,false);
+
+        /* create file */
+        $ext = pathinfo($name, PATHINFO_EXTENSION);
+        $obj->content_type = $this->getContentType($ext);
+        if (!$obj->write($content)) {
+            $this->addError('name',$this->xpdo->lexicon('file_err_nf').': '.$filePath);
+            return false;
+        }
+
+
+        $this->xpdo->logManagerAction('file_create','',$filePath);
+
+        return rawurlencode($filePath);
+    }
+
 
     /**
      * Upload files to Swift
@@ -703,7 +833,7 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
             'z' => 'application/x-compress',
             'zip' => 'application/zip'
         );
-        if (in_array(strtolower($ext),$mimeTypes)) {
+        if (isset($mimeTypes[$ext])) {
             $contentType = $mimeTypes[$ext];
         } else {
             $contentType = 'octet/application-stream';
@@ -896,8 +1026,8 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
             'last_modified' => '',
             'content' => $contents,
             'image' => in_array($fileExtension,$imageExtensions) ? true : false,
-            'is_writable' => false,
-            'is_readable' => false,
+            'is_writable' => true,
+            'is_readable' => true,
         );
     }
 }
