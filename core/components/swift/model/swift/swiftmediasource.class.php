@@ -1010,9 +1010,18 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
      */
     public function getObjectContents($objectPath) {
         $properties = $this->getPropertyList();
-        $objectUrl = $properties['url'].$objectPath;
-        $contents = @file_get_contents($objectUrl);
-
+        try {
+            $obj = new CF_Object($this->container,$objectPath, true);
+            $contents = $obj->read();
+            $last_modified = $obj->last_modified;
+            $size = $obj->content_length;
+        }
+        catch (Exception $e) {
+            $contents = '';
+            $last_modified = '';
+            $size = '';
+        }
+        
         $imageExtensions = $this->getOption('imageExtensions',$this->properties,'jpg,jpeg,png,gif');
         $imageExtensions = explode(',',$imageExtensions);
         $fileExtension = pathinfo($objectPath,PATHINFO_EXTENSION);
@@ -1021,9 +1030,9 @@ class SwiftMediaSource extends modMediaSource implements modMediaSourceInterface
             'name' => $objectPath,
             'basename' => basename($objectPath),
             'path' => $objectPath,
-            'size' => '',
+            'size' => $size,
             'last_accessed' => '',
-            'last_modified' => '',
+            'last_modified' => $last_modified,
             'content' => $contents,
             'image' => in_array($fileExtension,$imageExtensions) ? true : false,
             'is_writable' => true,
