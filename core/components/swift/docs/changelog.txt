@@ -1,9 +1,17 @@
 Changelog for OpenStack Swift.
 
+1.0.0-pl (22.12.2012)
+===============================
+
+* Use CF_Object in getObjectContents instead file_get_contents
+* Add support create and edit files
+* Fix upload files and create folders in root
+
+
 1.0.0 beta 2 (14.10.2012)
 ===============================
-Fix filepath in upload method
+* Fix filepath in upload method
 
 1.0.0 beta 1 (04.10.2012)
 ===============================
-Initial release
+* Initial release
