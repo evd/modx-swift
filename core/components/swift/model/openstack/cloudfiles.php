@@ -2534,7 +2534,7 @@ class CF_Object
             }
             $md5 = hash_final($ctx, false);
             rewind($data);
-        } elseif ((string)is_file($data)) {
+        } elseif ((string)@is_file($data)) {
             $md5 = md5_file($data);
         } else {
             $md5 = md5($data);
@@ -2626,4 +2626,3 @@ class CF_Object
  * c-hanging-comment-ender-p: nil
  * End:
  */
-?>

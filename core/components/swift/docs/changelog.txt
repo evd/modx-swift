@@ -1,5 +1,9 @@
 Changelog for OpenStack Swift.
 
+1.0.1-pl (11.04.2015)
+===============================
+* Some fixes in PHP Cloud Files API
+
 1.0.0-pl (22.12.2012)
 ===============================
 
