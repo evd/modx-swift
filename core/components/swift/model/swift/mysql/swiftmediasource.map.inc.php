@@ -1,10 +1,7 @@
 <?php
-/**
- * @package swift
- */
 $xpdo_meta_map['SwiftMediaSource']= array (
   'package' => 'swift',
-  'version' => NULL,
+  'version' => '1.1',
   'extends' => 'modMediaSource',
   'fields' => 
   array (
